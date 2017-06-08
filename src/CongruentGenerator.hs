@@ -1,26 +1,30 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 module CongruentGenerator where
 
 import Utils
+import Control.Lens
 
-data RandomContext = RandomContext {a :: Int, c :: Int, m :: Int, token :: Int}
+data RandomContext = RandomContext {_a :: Int, _c :: Int, _m :: Int, _token :: Int}
    deriving Show
+   
+makeLenses ''RandomContext
 
 simpleRndContext :: Int -> RandomContext
-simpleRndContext t = RandomContext {a = 106, c = 1283, m = 6075, token = t}
+simpleRndContext t = RandomContext {_a = 106, _c = 1283, _m = 6075, _token = t}
 
 rand :: Int -> RandomContext -> (Int, RandomContext)
 rand 0 context = (0, context)
 rand upBound context = 
-   let nextContext@RandomContext {token = t} = nextRnd context
-   in ((mod t upBound), nextContext)
+   let nextContext = nextRnd context
+   in ((mod (nextContext^.token) upBound), nextContext)
 
 
 nextRnd :: RandomContext -> RandomContext
-nextRnd RandomContext {..} = 
-   let nextVal = mod (a * token + c) m
-   in RandomContext a c m nextVal
+nextRnd ctx@RandomContext{..} = 
+   let nextVal = mod (_a * _token + _c) $ _m
+   in ctx & token .~ nextVal
 
 randVector :: Int -> Int -> RandomContext -> ([Int], RandomContext)
 randVector 0 upBound context = ([], context)

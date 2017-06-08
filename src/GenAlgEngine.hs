@@ -1,5 +1,6 @@
 {-# LANGUAGE ParallelListComp #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE TemplateHaskell #-}
 module GenAlgEngine where
 
 import Individual
@@ -7,13 +8,17 @@ import CongruentGenerator
 import OnesInd
 import Data.List
 import Utils
+import Control.Lens
 
 data GenAlgContext = GenAlgContext {
-   rndContext :: RandomContext,
-   mutationProb :: Int,
-   crossoverProb :: Int,
-   maxCount :: Int
+   _rndContext :: RandomContext,
+   _mutationProb :: Int,
+   _crossoverProb :: Int,
+   _maxCount :: Int
    } deriving Show
+   
+makeLenses ''GenAlgContext
+
    
 --Main functions
 runGA :: Individual i => GenAlgContext -> (GenAlgContext -> ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i])
@@ -24,24 +29,24 @@ runGADetail initContext factoryFunc stopFunc = stepOnGADetail (0, (factoryFunc i
    
 stepOnGA :: Individual i => (Int, ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i])
 stepOnGA (count, (inds, context)) stopFunc = 
-   if (stopFunc inds) || (count > (maxCount context))
+   if (stopFunc inds) || (count > (context^.maxCount))
    then (count, inds)
    else let (newInds, ctx) = newGeneration inds context 
       in stepOnGA (count+1, (newInds, ctx)) stopFunc
       
 stepOnGADetail :: Individual i => (Int, ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i], GenAlgContext)
 stepOnGADetail (count, (inds, context)) stopFunc = 
-   if (stopFunc inds) || (count >= (maxCount context))
+   if (stopFunc inds) || (count >= (context^.maxCount))
    then (count, inds, context)
    else let (newInds, ctx) = newGeneration inds context 
       in stepOnGADetail (count+1, (newInds, ctx)) stopFunc
    
 newGeneration :: Individual i => [i] -> GenAlgContext -> ([i], GenAlgContext)
-newGeneration population@(ind : _) context@GenAlgContext {rndContext, mutationProb, crossoverProb} = 
-   let (pool, g1) = createCrossoverPool population rndContext
-       (crossovered, g2) = probableApply (applyOperator crossover $ maxLocale ind)  crossoverProb (pool,g1)
-       (mutated, g3) = probableApply (applyOperator mutate $ maxLocale ind) mutationProb ((gatherElems crossovered), g2)
-   in (mutated, context{rndContext = g3})
+newGeneration population@(ind : _) context = 
+   let (pool, g1) = createCrossoverPool population $ context^.rndContext
+       (crossovered, g2) = probableApply (applyOperator crossover $ maxLocale ind)  (context^.crossoverProb) (pool,g1)
+       (mutated, g3) = probableApply (applyOperator mutate $ maxLocale ind) (context^.mutationProb) ((gatherElems crossovered), g2)
+   in (mutated, context&rndContext .~ g3)
    
 --private functions
 createCrossoverPool :: Individual i =>[i] -> RandomContext -> ([(i, i)], RandomContext)
