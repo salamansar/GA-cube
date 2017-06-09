@@ -9,6 +9,7 @@ import OnesInd
 import Data.List
 import Utils
 import Control.Lens
+import Control.Monad.State
 
 data GenAlgContext = GenAlgContext {
    _rndContext :: RandomContext,
@@ -31,7 +32,7 @@ stepOnGA :: Individual i => (Int, ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int
 stepOnGA (count, (inds, context)) stopFunc = 
    if (stopFunc inds) || (count > (context^.maxCount))
    then (count, inds)
-   else let (newInds, ctx) = newGeneration inds context 
+   else let (newInds, ctx) = runState (newGeneration1 inds) context -- newGeneration inds context  
       in stepOnGA (count+1, (newInds, ctx)) stopFunc
       
 stepOnGADetail :: Individual i => (Int, ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i], GenAlgContext)
@@ -47,6 +48,17 @@ newGeneration population@(ind : _) context =
        (crossovered, g2) = probableApply (applyOperator crossover $ maxLocale ind)  (context^.crossoverProb) (pool,g1)
        (mutated, g3) = probableApply (applyOperator mutate $ maxLocale ind) (context^.mutationProb) ((gatherElems crossovered), g2)
    in (mutated, context&rndContext .~ g3)
+   
+newGeneration1 :: Individual i => [i] -> State GenAlgContext [i]
+newGeneration1 population@(ind : _) = 
+   do g0 <- use rndContext
+      let (pool, g1) = createCrossoverPool population g0
+      crossProb <- use crossoverProb
+      let (crossovered, g2) = probableApply (applyOperator crossover $ maxLocale ind)  crossProb (pool,g1)
+      mutateProb <- use mutationProb
+      let (mutated, g3) = probableApply (applyOperator mutate $ maxLocale ind) mutateProb ((gatherElems crossovered), g2)
+      rndContext .= g3
+      return mutated
    
 --private functions
 createCrossoverPool :: Individual i =>[i] -> RandomContext -> ([(i, i)], RandomContext)

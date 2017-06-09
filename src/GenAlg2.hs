@@ -9,11 +9,12 @@ import OnesInd
 import Utils
 import Data.Function
 import BitOperations
+import Control.Lens
 
-defaultGenAlgContext = GenAlgContext {rndContext = simpleRndContext 100, 
-   mutationProb = 15,
-   crossoverProb = 60,
-   maxCount = 500000}
+defaultGenAlgContext = GenAlgContext {_rndContext = simpleRndContext 100, 
+   _mutationProb = 15,
+   _crossoverProb = 60,
+   _maxCount = 500000}
    
 -- Functions
 
@@ -56,16 +57,16 @@ processZerosGA4 bitNum size context =  runGA context (onesFirstGen bitNum size c
 
 -- create intial population of algorithm
 maxOnesExcludeFirstGen :: Int -> Int -> (Int -> Int -> BSInd) -> GenAlgContext -> ([BSInd], GenAlgContext)
-maxOnesExcludeFirstGen bitNum size createFunc context@GenAlgContext{rndContext} = 
+maxOnesExcludeFirstGen bitNum size createFunc context = 
    let upBound = determineUpNum bitNum
-       (rands, newContext) = randVector size upBound rndContext
-   in ([createFunc r bitNum | r <- rands], context{rndContext = newContext})
+       (rands, newContext) = randVector size upBound $ context^.rndContext
+   in ([createFunc r bitNum | r <- rands], context&rndContext.~newContext)
    
 minZerosExcludeFirstGen :: Int -> Int -> (Int -> Int -> BSInd) -> GenAlgContext -> ([BSInd], GenAlgContext)
-minZerosExcludeFirstGen bitNum size createFunc context@GenAlgContext{rndContext} = 
+minZerosExcludeFirstGen bitNum size createFunc context = 
    let upBound = powOfTwo bitNum - 2
-       (rands, newContext) = randVector size upBound rndContext
-   in ([createFunc (r + 1) bitNum | r <- rands], context{rndContext = newContext})
+       (rands, newContext) = randVector size upBound $ context^.rndContext
+   in ([createFunc (r + 1) bitNum | r <- rands], context&rndContext.~newContext)
    
 zerosFirstGen :: Int -> Int -> (Int -> Int -> BSInd) -> GenAlgContext -> ([BSInd], GenAlgContext)
 zerosFirstGen bitNum size createFunc context = ([createFunc 0 bitNum | count <- [1..size]], context)

@@ -1,23 +1,26 @@
 module EilerGenAlg where
 
+import BitOperations
+import CongruentGenerator
+import Control.Lens
+import Data.Graph
+import Data.List
 import EilerGraph
 import GenAlgEngine
 import Individual
-import CongruentGenerator
-import Data.Graph
-import BitOperations
-import Data.List
 
-defaultGenAlgContext = GenAlgContext {rndContext = simpleRndContext 100, 
-   mutationProb = 15,
-   crossoverProb = 60,
-   maxCount = 5000}
+
+
+defaultGenAlgContext = GenAlgContext {_rndContext = simpleRndContext 100, 
+   _mutationProb = 15,
+   _crossoverProb = 60,
+   _maxCount = 5000}
 
 defaultGenAlgContext2 :: Int -> GenAlgContext
-defaultGenAlgContext2 token = GenAlgContext {rndContext = simpleRndContext token, 
-   mutationProb = 15,
-   crossoverProb = 60,
-   maxCount = 5000}
+defaultGenAlgContext2 token = GenAlgContext {_rndContext = simpleRndContext token, 
+   _mutationProb = 15,
+   _crossoverProb = 60,
+   _maxCount = 5000}
 
 testGraph :: Graph
 testGraph = buildG (0,3) [(0,1), (1,0), (1,2), (1,3), (2,1), (2,3), (3,1), (3,2)]
@@ -43,9 +46,9 @@ fetchResult result = case find isEilerPath result of
 
 ---factory func
 eilerFirstGen :: Graph -> Int -> GenAlgContext -> ([EilerGraph], GenAlgContext)
-eilerFirstGen g count ctx@GenAlgContext{rndContext = rCtx} = 
-    let (rands, newCtx) = randVector count (powOfTwo $ pathDimension g)  rCtx
-    in (eilerInds g rands, ctx{rndContext = newCtx})
+eilerFirstGen g count ctx = 
+    let (rands, newCtx) = randVector count (powOfTwo $ pathDimension g)  $ ctx^.rndContext
+    in (eilerInds g rands, ctx&rndContext.~newCtx)
 
 
 ---stop function
