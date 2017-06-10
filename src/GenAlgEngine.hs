@@ -51,28 +51,43 @@ newGeneration population@(ind : _) context =
    
 newGeneration1 :: Individual i => [i] -> State GenAlgContext [i]
 newGeneration1 population@(ind : _) = 
-   do g0 <- use rndContext
-      let (pool, g1) = createCrossoverPool population g0
-      crossProb <- use crossoverProb
-      let (crossovered, g2) = probableApply (applyOperator crossover $ maxLocale ind)  crossProb (pool,g1)
+   do crossProb <- use crossoverProb
       mutateProb <- use mutationProb
-      let (mutated, g3) = probableApply (applyOperator mutate $ maxLocale ind) mutateProb ((gatherElems crossovered), g2)
-      rndContext .= g3
-      return mutated
+      let max = maxLocale ind
+      let crossoverOp = applyOperator crossover max
+      let mutationOp = applyOperator mutate max
+      zoom rndContext $
+         do pool <- createCrossoverPool1 population                  
+            crossovered <- probableApply1 crossoverOp crossProb pool -- crossover
+            probableApply1 mutationOp mutateProb (gatherElems crossovered) -- mutation
    
---private functions
+-- **** private functions ***** ---
+
+-- crossover pool
 createCrossoverPool :: Individual i =>[i] -> RandomContext -> ([(i, i)], RandomContext)
 createCrossoverPool population context = 
    let evals = populationRate population
        (inds1, gen1) =  gainElements evals ((length population) `div` 2) context
        (inds2, gen2) = gainElements evals ((length population) `div` 2) gen1
    in ([(x,y) | x <- inds1 | y <- inds2], gen2)   
+   
+createCrossoverPool1 :: Individual i => [i] -> State RandomContext [(i, i)]
+createCrossoverPool1 population = 
+   do let evals = populationRate population
+      inds1 <- gainElements1 evals ((length population) `div` 2)
+      inds2 <- gainElements1 evals ((length population) `div` 2)
+      return [(x,y) | x <- inds1 | y <- inds2]
 
 
 gainElements :: [(Int,a)] -> Int -> RandomContext -> ([a], RandomContext)
 gainElements evals num context = 
    let (rands,newContext) = randVector num (evalsSum evals) context
    in ([se | r <- rands, let se = selectElement evals r], newContext)
+   
+gainElements1 :: [(Int,a)] -> Int -> State RandomContext [a]
+gainElements1 evals num = 
+   do rands <- randVectorS num (evalsSum evals)
+      return [se | r <- rands, let se = selectElement evals r]
    
 evalsSum :: [(Int,a)] -> Int
 evalsSum elems = sum $ fst $ unzip elems
@@ -91,12 +106,21 @@ transformToLadder = reverse
       then val:[] 
       else (val + head list):list) []
    .reverse
-   
+
+-- apply operators
 probableApply :: (([a], RandomContext) -> ([a], RandomContext)) -> Int -> ([a], RandomContext) -> ([a], RandomContext)
 probableApply f prob (elems, context) = 
    let (apply, ignore, g1) = spanWithProb prob (elems, context)
        (result, g2) = f (apply, g1)
    in (result ++ ignore , g2)
+   
+probableApply1 :: (([a], RandomContext) -> ([a], RandomContext)) -> Int -> [a] -> State RandomContext [a]
+probableApply1 f prob elems = 
+   do context <- get
+      let (apply, ignore, g1) = spanWithProb prob (elems, context)
+      let (result, g2) = f (apply, g1)
+      put g2
+      return (result ++ ignore)
    
 spanWithProb :: Int -> ([a], RandomContext) -> ([a],[a],RandomContext)
 spanWithProb prob (elems, context) = 

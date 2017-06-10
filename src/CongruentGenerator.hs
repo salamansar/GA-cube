@@ -5,6 +5,7 @@ module CongruentGenerator where
 
 import Utils
 import Control.Lens
+import Control.Monad.State
 
 data RandomContext = RandomContext {_a :: Int, _c :: Int, _m :: Int, _token :: Int}
    deriving Show
@@ -36,5 +37,11 @@ randVector3 :: Int -> RandomContext -> [(Int, RandomContext)]
 randVector3 upBound context = iterate nextVal $ nextVal (0, context)
    where nextVal = \(_, ctx) -> rand upBound ctx
    
-
+-- generator for State monad
+randVectorS :: Int -> Int -> State RandomContext [Int]
+randVectorS count upBound =
+   do ctx <- get
+      let (v, newCtx) = randVector count upBound ctx
+      put newCtx
+      return v
 
