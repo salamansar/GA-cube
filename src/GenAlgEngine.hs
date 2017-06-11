@@ -32,60 +32,40 @@ stepOnGA :: Individual i => (Int, ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int
 stepOnGA (count, (inds, context)) stopFunc = 
    if (stopFunc inds) || (count > (context^.maxCount))
    then (count, inds)
-   else let (newInds, ctx) = runState (newGeneration1 inds) context -- newGeneration inds context  
+   else let (newInds, ctx) = runState (newGeneration inds) context
       in stepOnGA (count+1, (newInds, ctx)) stopFunc
       
 stepOnGADetail :: Individual i => (Int, ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i], GenAlgContext)
 stepOnGADetail (count, (inds, context)) stopFunc = 
    if (stopFunc inds) || (count >= (context^.maxCount))
    then (count, inds, context)
-   else let (newInds, ctx) = newGeneration inds context 
+   else let (newInds, ctx) = runState (newGeneration inds) context 
       in stepOnGADetail (count+1, (newInds, ctx)) stopFunc
    
-newGeneration :: Individual i => [i] -> GenAlgContext -> ([i], GenAlgContext)
-newGeneration population@(ind : _) context = 
-   let (pool, g1) = createCrossoverPool population $ context^.rndContext
-       (crossovered, g2) = probableApply (applyOperator crossover $ maxLocale ind)  (context^.crossoverProb) (pool,g1)
-       (mutated, g3) = probableApply (applyOperator mutate $ maxLocale ind) (context^.mutationProb) ((gatherElems crossovered), g2)
-   in (mutated, context&rndContext .~ g3)
-   
-newGeneration1 :: Individual i => [i] -> State GenAlgContext [i]
-newGeneration1 population@(ind : _) = 
+newGeneration :: Individual i => [i] -> State GenAlgContext [i]
+newGeneration population@(ind : _) = 
    do crossProb <- use crossoverProb
       mutateProb <- use mutationProb
       let max = maxLocale ind
       let crossoverOp = applyOperator crossover max
       let mutationOp = applyOperator mutate max
       zoom rndContext $
-         do pool <- createCrossoverPool1 population                  
-            crossovered <- probableApply1 crossoverOp crossProb pool -- crossover
-            probableApply1 mutationOp mutateProb (gatherElems crossovered) -- mutation
+         do pool <- createCrossoverPool population                  
+            crossovered <- probableApply crossoverOp crossProb pool -- crossover
+            probableApply mutationOp mutateProb (gatherElems crossovered) -- mutation
    
 -- **** private functions ***** ---
 
--- crossover pool
-createCrossoverPool :: Individual i =>[i] -> RandomContext -> ([(i, i)], RandomContext)
-createCrossoverPool population context = 
-   let evals = populationRate population
-       (inds1, gen1) =  gainElements evals ((length population) `div` 2) context
-       (inds2, gen2) = gainElements evals ((length population) `div` 2) gen1
-   in ([(x,y) | x <- inds1 | y <- inds2], gen2)   
-   
-createCrossoverPool1 :: Individual i => [i] -> State RandomContext [(i, i)]
-createCrossoverPool1 population = 
+-- crossover pool   
+createCrossoverPool :: Individual i => [i] -> State RandomContext [(i, i)]
+createCrossoverPool population = 
    do let evals = populationRate population
-      inds1 <- gainElements1 evals ((length population) `div` 2)
-      inds2 <- gainElements1 evals ((length population) `div` 2)
+      inds1 <- gainElements evals ((length population) `div` 2)
+      inds2 <- gainElements evals ((length population) `div` 2)
       return [(x,y) | x <- inds1 | y <- inds2]
-
-
-gainElements :: [(Int,a)] -> Int -> RandomContext -> ([a], RandomContext)
-gainElements evals num context = 
-   let (rands,newContext) = randVector num (evalsSum evals) context
-   in ([se | r <- rands, let se = selectElement evals r], newContext)
    
-gainElements1 :: [(Int,a)] -> Int -> State RandomContext [a]
-gainElements1 evals num = 
+gainElements :: [(Int,a)] -> Int -> State RandomContext [a]
+gainElements evals num = 
    do rands <- randVectorS num (evalsSum evals)
       return [se | r <- rands, let se = selectElement evals r]
    
@@ -107,31 +87,23 @@ transformToLadder = reverse
       else (val + head list):list) []
    .reverse
 
--- apply operators
-probableApply :: (([a], RandomContext) -> ([a], RandomContext)) -> Int -> ([a], RandomContext) -> ([a], RandomContext)
-probableApply f prob (elems, context) = 
-   let (apply, ignore, g1) = spanWithProb prob (elems, context)
-       (result, g2) = f (apply, g1)
-   in (result ++ ignore , g2)
-   
-probableApply1 :: (([a], RandomContext) -> ([a], RandomContext)) -> Int -> [a] -> State RandomContext [a]
-probableApply1 f prob elems = 
-   do context <- get
-      let (apply, ignore, g1) = spanWithProb prob (elems, context)
-      let (result, g2) = f (apply, g1)
-      put g2
+-- apply operators   
+probableApply :: ([a] -> State RandomContext [a]) -> Int -> [a] -> State RandomContext [a]
+probableApply f prob elems = 
+   do (apply, ignore) <- spanWithProb prob elems
+      result <- f apply
       return (result ++ ignore)
+
+spanWithProb :: Int -> [a] -> State RandomContext ([a],[a])
+spanWithProb prob elems = 
+   do dices <-  randVectorS (length elems) 100
+      let (zelems1, zelems2) = partition (\(dice,elem) -> dice < prob) $ zip dices elems 
+      return (snd $ unzip zelems1, snd $ unzip zelems2)
    
-spanWithProb :: Int -> ([a], RandomContext) -> ([a],[a],RandomContext)
-spanWithProb prob (elems, context) = 
-   let (dices, newContext) = randVector (length elems) 100 context
-       (zelems1, zelems2) = partition (\(dice,elem) -> dice < prob) $ zip dices elems 
-   in (snd $ unzip zelems1, snd $ unzip zelems2, newContext)
-   
-applyOperator :: (a -> Int -> a) -> Int -> ([a], RandomContext) -> ([a], RandomContext)
-applyOperator op up (elems, context) =
-   let (dices, newContext) = randVector (length elems) (up+1) context
-   in ([op x dice | x <- elems | dice <- dices], newContext)
+applyOperator :: (a -> Int -> a) -> Int -> [a] -> State RandomContext [a]
+applyOperator op up elems =
+   do dices <- randVectorS (length elems) (up+1)
+      return [op x dice | x <- elems | dice <- dices]
 
 
 
