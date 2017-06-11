@@ -50,12 +50,18 @@ zeros :: Int -> Int
 zeros = complement.ones
 
 high :: Int -> Int -> Int
-high num locale = num .&. (zeros $ locale + 1)
+high num locale = num .&. (zeros $ locale)
+
+highs :: Int -> Int -> Int
+highs num locale = num .&. (zeros $ locale + 1)
 
 low :: Int -> Int -> Int
 low num locale = num .&. (ones $ locale + 1)
 
+lows :: Int -> Int -> Int
+lows num locale = num .&. (ones $ locale)
+
 splitBits :: Int -> Int -> (Int, Int)
-splitBits num locale = (high num locale, low num locale)
+splitBits num locale = (highs num locale, low num locale)
 
          

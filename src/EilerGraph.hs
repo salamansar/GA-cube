@@ -28,9 +28,9 @@ phenotype EilerGraph{graph = g, genome = gen} = mapFromBits gen len cnt
 -- mapping from genome to phenotype
 mapFromBits :: Int -> Int -> Int -> [Vertex]
 mapFromBits _ _ c | c < 1 = [-1]
-mapFromBits bitStr len 1 = [low bitStr len]
+mapFromBits bitStr len 1 = [lows bitStr len]
 mapFromBits bitStr len count = current : mapFromBits (shiftR bitStr len) len (count-1)
-   where current = low bitStr len
+   where current = lows bitStr len
    
 -- fitnesse function
 eilerFitnesse :: Graph -> [Vertex] -> Int

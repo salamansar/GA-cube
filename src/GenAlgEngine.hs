@@ -15,32 +15,35 @@ data GenAlgContext = GenAlgContext {
    _rndContext :: RandomContext,
    _mutationProb :: Int,
    _crossoverProb :: Int,
-   _maxCount :: Int
+   _maxCount :: Int,
+   _count :: Int
    } deriving Show
    
 makeLenses ''GenAlgContext
-
    
 --Main functions
 runGA :: Individual i => GenAlgContext -> (GenAlgContext -> ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i])
-runGA initContext factoryFunc stopFunc = stepOnGA (1, (factoryFunc initContext)) stopFunc
+runGA initContext factoryFunc stopFunc = 
+   let (count,finalPop,_) = runGADetail initContext factoryFunc stopFunc
+   in (count, finalPop)
 
 runGADetail :: Individual i => GenAlgContext -> (GenAlgContext -> ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i], GenAlgContext)
-runGADetail initContext factoryFunc stopFunc = stepOnGADetail (0, (factoryFunc initContext)) stopFunc
-   
-stepOnGA :: Individual i => (Int, ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i])
-stepOnGA (count, (inds, context)) stopFunc = 
-   if (stopFunc inds) || (count > (context^.maxCount))
-   then (count, inds)
-   else let (newInds, ctx) = runState (newGeneration inds) context
-      in stepOnGA (count+1, (newInds, ctx)) stopFunc
+runGADetail initContext factoryFunc stopFunc = 
+   let (initPop,context) = factoryFunc initContext 
+       (finalPop,finalContext) = runState (stepOnGA initPop stopFunc) $ context&count.~0
+       in (finalContext^.count, finalPop, finalContext)
+
+--------------
       
-stepOnGADetail :: Individual i => (Int, ([i], GenAlgContext)) -> ([i] -> Bool) -> (Int, [i], GenAlgContext)
-stepOnGADetail (count, (inds, context)) stopFunc = 
-   if (stopFunc inds) || (count >= (context^.maxCount))
-   then (count, inds, context)
-   else let (newInds, ctx) = runState (newGeneration inds) context 
-      in stepOnGADetail (count+1, (newInds, ctx)) stopFunc
+stepOnGA :: Individual i => [i] -> ([i] -> Bool) -> State GenAlgContext [i]
+stepOnGA inds stopFunc = 
+   do count += 1
+      cnt <- use count      
+      maxCnt <- use maxCount
+      if (stopFunc inds) || (cnt > maxCnt)
+         then return inds
+         else do newInds <- newGeneration inds
+                 stepOnGA newInds stopFunc
    
 newGeneration :: Individual i => [i] -> State GenAlgContext [i]
 newGeneration population@(ind : _) = 

@@ -14,7 +14,8 @@ import Control.Lens
 defaultGenAlgContext = GenAlgContext {_rndContext = simpleRndContext 100, 
    _mutationProb = 15,
    _crossoverProb = 60,
-   _maxCount = 500000}
+   _maxCount = 500000,
+   _count = 0}
    
 -- Functions
 

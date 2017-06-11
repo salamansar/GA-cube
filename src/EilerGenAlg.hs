@@ -14,13 +14,15 @@ import Individual
 defaultGenAlgContext = GenAlgContext {_rndContext = simpleRndContext 100, 
    _mutationProb = 15,
    _crossoverProb = 60,
-   _maxCount = 5000}
+   _maxCount = 5000,
+   _count = 0}
 
 defaultGenAlgContext2 :: Int -> GenAlgContext
 defaultGenAlgContext2 token = GenAlgContext {_rndContext = simpleRndContext token, 
    _mutationProb = 15,
    _crossoverProb = 60,
-   _maxCount = 5000}
+   _maxCount = 5000,
+   _count = 0}
 
 testGraph :: Graph
 testGraph = buildG (0,3) [(0,1), (1,0), (1,2), (1,3), (2,1), (2,3), (3,1), (3,2)]
@@ -38,7 +40,15 @@ runEilerGaFine g pop = let (count, result) = runEilerGa g pop
 runEilerGa :: Graph -> Int -> (Int,[Int])
 runEilerGa g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
    in (count, fetchResult result)
+   
+runEilerGaGen :: Graph -> Int -> (Int,[Int])
+runEilerGaGen g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
+   in (count, map genome result)
       
+runEilerGaPhen :: Graph -> Int -> (Int,[[Int]])
+runEilerGaPhen g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
+   in (count, map phenotype result)
+
 fetchResult :: [EilerGraph] -> [Int]
 fetchResult result = case find isEilerPath result of
       Nothing -> []
