@@ -8,13 +8,14 @@ import Data.List
 import EilerGraph
 import GenAlgEngine
 import Individual
+import GaGraph
 
 
 
 defaultGenAlgContext = GenAlgContext {_rndContext = simpleRndContext 100, 
    _mutationProb = 15,
    _crossoverProb = 60,
-   _maxCount = 5000,
+   _maxCount = 100000,
    _count = 0}
 
 defaultGenAlgContext2 :: Int -> GenAlgContext
@@ -47,7 +48,11 @@ runEilerGaGen g popSize = let (count, result) = runGA defaultGenAlgContext (eile
       
 runEilerGaPhen :: Graph -> Int -> (Int,[[Int]])
 runEilerGaPhen g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
-   in (count, map phenotype result)
+   in (count, map ((map (+1)).phenotype) result)
+   
+runEilerGaFit :: Graph -> Int -> (Int,[Int])
+runEilerGaFit g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
+   in (count, map fitnesse result)
 
 fetchResult :: [EilerGraph] -> [Int]
 fetchResult result = case find isEilerPath result of

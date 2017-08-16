@@ -20,6 +20,8 @@ executable ga-main
   other-modules:
                 EilerGenAlg,
                 EilerGraph,
+                HamiltonGraph,
+                GaGraph,
                 GenAlg2,
                 GenAlgEngine,                
                 CongruentGenerator, 
