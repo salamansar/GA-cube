@@ -25,15 +25,6 @@ defaultGenAlgContext2 token = GenAlgContext {_rndContext = simpleRndContext toke
    _maxCount = 5000,
    _count = 0}
 
-testGraph :: Graph
-testGraph = buildG (0,3) [(0,1), (1,0), (1,2), (1,3), (2,1), (2,3), (3,1), (3,2)]
-
-testGraph2 :: Graph
-testGraph2 = buildG (0,6) [(0,1), (1,0),(1,5), (2,5),(2,3), (3,2),(3,5), (4,5),(4,6), (5,1),(5,2),(5,3),(5,4), (6,4)]
-
-testGraph3 :: Graph
-testGraph3 = buildG (0,4) [(0,1),(0,2),(0,3), (1,0),(1,2),(1,4), (2,0),(2,1), (3,0),(3,4), (4,1), (4,3)]
-
 runEilerGaFine :: Graph -> Int -> (Int,[Int])
 runEilerGaFine g pop = let (count, result) = runEilerGa g pop
    in (count, map (+1) result)
@@ -48,7 +39,7 @@ runEilerGaGen g popSize = let (count, result) = runGA defaultGenAlgContext (eile
       
 runEilerGaPhen :: Graph -> Int -> (Int,[[Int]])
 runEilerGaPhen g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
-   in (count, map ((map (+1)).phenotype) result)
+   in (count, map ((map (+1)).eilerPhenotype) result)
    
 runEilerGaFit :: Graph -> Int -> (Int,[Int])
 runEilerGaFit g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
@@ -57,7 +48,7 @@ runEilerGaFit g popSize = let (count, result) = runGA defaultGenAlgContext (eile
 fetchResult :: [EilerGraph] -> [Int]
 fetchResult result = case find isEilerPath result of
       Nothing -> []
-      Just eg -> phenotype eg
+      Just eg -> eilerPhenotype eg
 
 ---factory func
 eilerFirstGen :: Graph -> Int -> GenAlgContext -> ([EilerGraph], GenAlgContext)

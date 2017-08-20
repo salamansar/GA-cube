@@ -12,7 +12,7 @@ import GaGraph
 data EilerGraph = EilerGraph {graph :: Graph, genome :: Int}
 
 instance Individual EilerGraph where
-   fitnesse eg@EilerGraph{graph = g} = eilerFitnesse g $ phenotype eg
+   fitnesse eg@EilerGraph{graph = g} = eilerFitnesse g $ eilerPhenotype eg
    mutate = mutateBitString
    crossover = crossoverBitString
    maxLocale EilerGraph{graph = g} = pathDimension g - 1
@@ -21,8 +21,8 @@ instance BitStringInd EilerGraph where
    getGenome ind = genome ind
    setGenome ind newG = ind{genome = newG}
    
-phenotype :: EilerGraph -> [Vertex]
-phenotype EilerGraph{graph = g, genome = gen} = mapFromBits gen len cnt
+eilerPhenotype :: EilerGraph -> [Vertex]
+eilerPhenotype EilerGraph{graph = g, genome = gen} = mapFromBits gen len cnt
       where len = vertexDimension g
             cnt = edgesNum g + 1 
 
@@ -35,9 +35,6 @@ eilerFitnesse g = foldr (\e -> (hasEdgeN e g +)) 0
    . formEdges  
 
 -- help functions
-vertexDimension :: Graph -> Int
-vertexDimension =  minDimension.(flip (-) 1).length.vertices
-
 pathDimension :: Graph -> Int
 pathDimension g = (vertexDimension g) * (edgesNum g + 1)
 
