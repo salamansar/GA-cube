@@ -42,8 +42,7 @@ countHamiltonEdges :: [Edge] -> Int
 countHamiltonEdges e = evalState (foldM doCountHamiltonEdges 0 e) initState
    where initState = HamiltonEdgesState {_outbound = [], _inbound = [startVertex e]}
    
-startVertex :: [Edge] -> Vertex
-startVertex ((v,_):_) = v
+
 
 doCountHamiltonEdges :: Int -> Edge -> State HamiltonEdgesState Int
 doCountHamiltonEdges accum (o,i) = 
@@ -56,4 +55,42 @@ doCountHamiltonEdges accum (o,i) =
         return (accum + 1) 
       else return accum     
       
- 
+-- fitnesse is score = m + (max {|Pe|} - 1) * n,
+-- where m - count of unique edges in path
+--       |Pe| - cardinality of uniterrupted subpath
+--       {|Pe|} - set of cardinalities of all uniterrupted subpaths
+--       n -  count of vertexes
+hamiltonFitnesse2 :: Graph -> [Vertex] -> Int
+hamiltonFitnesse2 g path = m + (maxP - 1) * n
+   where m = length $ formUniqueEdgesSequence g path
+         maxP = maxCardinality g path
+         n = verticesNum g
+
+maxCardinality :: Graph -> [Vertex] -> Int
+maxCardinality g = maxDef0
+   .(map length)
+   .(filter (\p -> (length.uniqueEdges) p == length p))
+   .(subpaths g)
+
+maxDef0 :: [Int] -> Int
+maxDef0 [] = 0
+maxDef0 v = maximum v
+
+subpaths :: Graph -> [Vertex] -> [[Edge]]
+subpaths g [] = []
+subpaths g (v:[]) = []
+subpaths g vertexes@(v:tail) = (splitToSubPaths $ subpath g vertexes) ++ subpaths g tail
+
+splitToSubPaths :: [Edge] -> [[Edge]]
+splitToSubPaths path = evalState (foldM doSplitToSubPaths [] path) [] 
+
+doSplitToSubPaths :: [[Edge]] -> Edge -> State [Edge] [[Edge]]
+doSplitToSubPaths accum e = 
+   do cp <- get
+      let np = cp ++ [e]
+      put np
+      return $ np:accum 
+     
+
+subpath :: Graph -> [Vertex] -> [Edge]
+subpath g =  (takeWhile (flip hasEdge g)).formEdges

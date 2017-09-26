@@ -16,6 +16,10 @@ formEdges :: [Vertex] -> [Edge]
 formEdges [] = []
 formEdges vl@(_:vs) = zip vl vs
 
+formVertices :: [Edge] -> [Vertex]
+formVertices [] = []
+formVertices e = (startVertex e) : (snd.unzip) e
+
 hasEdge :: Edge -> Graph -> Bool
 hasEdge e = any (== e) .edges
 
@@ -42,3 +46,6 @@ verticesNum = length . vertices
 
 vertexDimension :: Graph -> Int
 vertexDimension =  minDimension.(flip (-) 1).length.vertices
+
+startVertex :: [Edge] -> Vertex
+startVertex ((v,_):_) = v
