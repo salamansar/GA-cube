@@ -18,9 +18,11 @@ cabal-version:       >=1.10
 executable ga-main
   main-is: Main.hs
   other-modules:
+                BitStringIndRunner,
                 EilerGenAlg,
                 EilerGraph,
                 HamiltonGraph,
+                HamiltonGenAlg,
                 GaGraph,
                 GenAlg2,
                 GenAlgEngine,                

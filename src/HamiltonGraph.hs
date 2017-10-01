@@ -2,11 +2,13 @@
 module HamiltonGraph where
 
 import Data.Graph
+import qualified Data.Set as S
 import GaGraph
 import Individual
 import Control.Monad.State
 import Control.Lens
 import Control.Monad
+import Control.Monad.List as L
 
 data HamiltonGraph = HamiltonGraph {graph :: Graph, genome :: Int}
 
@@ -18,7 +20,7 @@ instance Individual HamiltonGraph where
     mutate = mutateBitString
     crossover = crossoverBitString
     maxLocale HamiltonGraph{graph = g} = hamiltonPathDimension g - 1
-    fitnesse eg@HamiltonGraph{graph = g} = hamiltonFitnesse1 g $ hamiltonPhenotype eg
+    fitnesse eg@HamiltonGraph{graph = g} = hamiltonFitnesse2 g $ hamiltonPhenotype eg
    
 instance BitStringInd HamiltonGraph where
     getGenome ind = genome ind
@@ -63,7 +65,8 @@ doCountHamiltonEdges accum (o,i) =
 hamiltonFitnesse2 :: Graph -> [Vertex] -> Int
 hamiltonFitnesse2 g path = m + (maxP - 1) * n
    where m = length $ formUniqueEdgesSequence g path
-         maxP = maxCardinality g path
+         maxCard = maxCardinality g path
+         maxP = if(maxCard > 0) then maxCard else 1
          n = verticesNum g
 
 maxCardinality :: Graph -> [Vertex] -> Int
@@ -93,4 +96,18 @@ doSplitToSubPaths accum e =
      
 
 subpath :: Graph -> [Vertex] -> [Edge]
-subpath g =  (takeWhile (flip hasEdge g)).formEdges
+subpath g v =  
+   let edges = formEdges v
+       initState = S.fromList [startVertex edges]
+   in evalStateT (doSubpath g edges) initState
+
+--todo: fix subpath calculation
+doSubpath :: Graph -> [Edge] -> StateT (S.Set Vertex) [] Edge
+doSubpath g edges = 
+   do e@(s,f) <- lift edges 
+      guard $ hasEdge e g
+      ctx <- get
+      guard $ not $ f `S.member` ctx
+      put $ f `S.insert` ctx
+      return e
+      

@@ -9,6 +9,7 @@ import EilerGraph
 import GenAlgEngine
 import Individual
 import GaGraph
+import qualified BitStringIndRunner as BSR
 
 
 
@@ -30,19 +31,24 @@ runEilerGaFine g pop = let (count, result) = runEilerGa g pop
    in (count, map (+1) result)
 
 runEilerGa :: Graph -> Int -> (Int,[Int])
-runEilerGa g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
+runEilerGa g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) (eilerPathFound g)
    in (count, fetchResult result)
    
+runEilerGa2 :: Graph -> Int -> (Int,[Int])
+runEilerGa2 g popSize = let (count, result) = BSR.processGAPop popSize (maxEilerFitnesse g) (pathDimension g) (eilerInd g)
+   in (count, fetchResult result)
+   
+   
 runEilerGaGen :: Graph -> Int -> (Int,[Int])
-runEilerGaGen g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
+runEilerGaGen g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) (eilerPathFound g)
    in (count, map genome result)
       
 runEilerGaPhen :: Graph -> Int -> (Int,[[Int]])
-runEilerGaPhen g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
+runEilerGaPhen g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) (eilerPathFound g)
    in (count, map ((map (+1)).eilerPhenotype) result)
    
 runEilerGaFit :: Graph -> Int -> (Int,[Int])
-runEilerGaFit g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) eilerPathFound
+runEilerGaFit g popSize = let (count, result) = runGA defaultGenAlgContext (eilerFirstGen g popSize) (eilerPathFound g)
    in (count, map fitnesse result)
 
 fetchResult :: [EilerGraph] -> [Int]
@@ -56,14 +62,19 @@ eilerFirstGen g count ctx =
     let (rands, newCtx) = randVector count (powOfTwo $ pathDimension g)  $ ctx^.rndContext
     in (eilerInds g rands, ctx&rndContext.~newCtx)
 
-
 ---stop function
-eilerPathFound :: [EilerGraph] -> Bool
-eilerPathFound = any isEilerPath
+eilerPathFound :: Graph -> [EilerGraph] -> Bool
+eilerPathFound g = maxFitnesseStop $  maxEilerFitnesse g
+
+maxEilerFitnesse :: Graph -> Int
+maxEilerFitnesse = edgesNum
 
 isEilerPath :: EilerGraph -> Bool
-isEilerPath eg = fitnesse eg == (edgesNum $ graph eg)
+isEilerPath eg = fitnesse eg == (maxEilerFitnesse  $ graph eg)
 
 ---help functions
 eilerInds :: Graph -> [Int] -> [EilerGraph]
-eilerInds g = map (\gn -> EilerGraph{graph = g, genome = gn})
+eilerInds g = map (eilerInd g)
+
+eilerInd :: Graph -> Int -> EilerGraph
+eilerInd g gn = EilerGraph{graph = g, genome = gn}

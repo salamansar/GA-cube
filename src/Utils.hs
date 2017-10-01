@@ -9,5 +9,6 @@ zeros size = expandElems (\x -> 0) size
                                    
 gatherElems :: [(a,a)] -> [a]
 gatherElems elems = let (left, right) = unzip elems in left ++ right
+
                                    
  

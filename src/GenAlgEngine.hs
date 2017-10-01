@@ -33,6 +33,11 @@ runGADetail initContext factoryFunc stopFunc =
        (finalPop,finalContext) = runState (stepOnGA initPop stopFunc) $ context&count.~0
        in (finalContext^.count, finalPop, finalContext)
 
+runGAS :: Individual i => GenAlgContext -> (State GenAlgContext [i]) -> ([i] -> Bool) -> (Int, [i])
+runGAS initContext factoryFunc stopFunc =
+   let (finalPop,finalContext) = runState (runGADetailS factoryFunc stopFunc) initContext
+       in (finalContext^.count, finalPop)
+
 --------------
       
 stepOnGA :: Individual i => [i] -> ([i] -> Bool) -> State GenAlgContext [i]
@@ -56,6 +61,14 @@ newGeneration population@(ind : _) =
          do pool <- createCrossoverPool population                  
             crossovered <- probableApply crossoverOp crossProb pool -- crossover
             probableApply mutationOp mutateProb (gatherElems crossovered) -- mutation
+          
+-- main function with monad initialization
+runGADetailS :: Individual i => (State GenAlgContext [i]) -> ([i] -> Bool) -> State GenAlgContext [i]
+runGADetailS factoryFunc stopFunc =
+   do initPop <- factoryFunc 
+      count.=0
+      finalPop <- stepOnGA initPop stopFunc
+      return finalPop
    
 -- **** private functions ***** ---
 

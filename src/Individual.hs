@@ -12,6 +12,9 @@ class Individual i where
 class Individual bsi => BitStringInd bsi where
    getGenome :: bsi -> Int
    setGenome :: bsi -> Int -> bsi
+   
+class HasPhenotype i where
+   phenotype :: i -> a
 
 -- Functions   
 populationRate :: Individual i => [i] -> [(Int, i)]
@@ -31,4 +34,12 @@ crossoverBitString (ind1, ind2) locale =
 --- util functions
 genomes :: BitStringInd i => [i] -> [Int]
 genomes = map getGenome
+
+maxFitnesseStop :: Individual i => Int -> [i] -> Bool
+maxFitnesseStop mx = any (maxFitnesseReached mx)
+
+maxFitnesseReached :: Individual i => Int -> i -> Bool
+maxFitnesseReached mx ind = fitnesse ind == mx
+
+ 
  
