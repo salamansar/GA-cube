@@ -10,7 +10,7 @@ import Individual
 defaultGenAlgContext = GenAlgContext {_rndContext = simpleRndContext 100, 
    _mutationProb = 15,
    _crossoverProb = 60,
-   _maxCount = 100000,
+   _maxCount = 10000,
    _count = 0}
 
 --- Invariants of running functions   
@@ -30,6 +30,13 @@ processGAPhen popSize maxLocale maxFit factoryFunc phenotypeFunc =
           Nothing -> Nothing
           Just ind -> Just $ phenotypeFunc ind 
    in (cnt, phen)
+   
+--at the end returns last decoded population 
+processGALastPhen :: Individual i => Int -> Int -> Int -> (Int -> i) -> (i -> a) -> (Int, [a])
+processGALastPhen popSize maxLocale maxFit factoryFunc phenotypeFunc = 
+   let (cnt, inds) = processGAPop popSize maxLocale maxFit factoryFunc
+       phens = map phenotypeFunc inds 
+   in (cnt, phens)
    
 ----
 randomGenomeInit :: Individual i => Int -> Int -> (Int -> i) -> State GenAlgContext [i]

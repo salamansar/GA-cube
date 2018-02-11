@@ -22,6 +22,12 @@ runHamiltonGaFine g popSize =
 runHamiltonGa :: Graph -> Int -> (Int, Maybe [Int])
 runHamiltonGa g popSize = processGAPhen popSize (hamiltonPathDimension g) (maxFitnesse g) (hamiltonInd g) hamiltonPhenotype
 
+runHamiltonGaLastFine :: Graph -> Int -> (Int, [[Int]])
+runHamiltonGaLastFine g popSize = 
+   let (cnt, res) = processGALastPhen popSize (hamiltonPathDimension g) (maxFitnesse g) (hamiltonInd g) hamiltonPhenotype
+   in (cnt, incrementResult(res))
+   where incrementResult = map (\v -> map (+1) v)                                 
+
 -- private functions
 maxFitnesse :: Graph -> Int
 maxFitnesse g = n * (n - 1) -1

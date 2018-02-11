@@ -6,6 +6,7 @@ import qualified Data.Set as S
 import GaGraph
 import Individual
 import Control.Monad.State
+import Control.Monad.List
 import Control.Lens
 import Control.Monad
 import Control.Monad.List as L
@@ -59,8 +60,8 @@ doCountHamiltonEdges accum (o,i) =
       
 -- fitnesse is score = m + (max {|Pe|} - 1) * n,
 -- where m - count of unique edges in path
---       |Pe| - cardinality of uniterrupted subpath
---       {|Pe|} - set of cardinalities of all uniterrupted subpaths
+--       |Pe| - cardinality of uninterrupted subpath
+--       {|Pe|} - set of cardinalities of all uninterrupted subpaths
 --       n -  count of vertexes
 hamiltonFitnesse2 :: Graph -> [Vertex] -> Int
 hamiltonFitnesse2 g path = m + (maxP - 1) * n
@@ -99,15 +100,15 @@ subpath :: Graph -> [Vertex] -> [Edge]
 subpath g v =  
    let edges = formEdges v
        initState = S.fromList [startVertex edges]
-   in evalStateT (doSubpath g edges) initState
-
---todo: fix subpath calculation
-doSubpath :: Graph -> [Edge] -> StateT (S.Set Vertex) [] Edge
-doSubpath g edges = 
-   do e@(s,f) <- lift edges 
-      guard $ hasEdge e g
-      ctx <- get
-      guard $ not $ f `S.member` ctx
-      put $ f `S.insert` ctx
-      return e
+   in evalState (doSubpath g edges) initState
       
+doSubpath :: Graph -> [Edge] -> State (S.Set Vertex) [Edge]
+doSubpath _ [] = do return []
+doSubpath g (e@(_,f):tail) = 
+   do ctx <- get
+      if((hasEdge e g) && not (f `S.member` ctx)) 
+      then do
+         put $ f `S.insert` ctx
+         lowerSubPath <- doSubpath g tail
+         return $ e:lowerSubPath
+      else return []
