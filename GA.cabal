@@ -2,7 +2,7 @@
 -- see http://haskell.org/cabal/users-guide/
 
 name:                GA
-version:             0.1
+version:             0.2
 synopsis:            Lib for genetic algorithm
 -- description:         
 license:             MIT
@@ -32,7 +32,11 @@ executable ga-main
                 OnesInd, 
                 Utils     
   -- other-extensions:    
-  build-depends:       base >=4.8, containers, lens, mtl
+  build-depends:       base >=4.8, 
+                       graphviz >=2999.20.0.0 || <2999.21.0.0,
+                       containers, 
+                       lens, 
+                       mtl
   hs-source-dirs:      src
   default-language:    Haskell2010
   -- ghc-options: -prof -fprof-auto -rtsopts
