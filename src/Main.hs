@@ -12,10 +12,19 @@ import GraphIO
 
 main::IO ()
 main = do
-   (g, adj) <- readGraph "srcGraph.dot"
+   (srcPath, destPath) <- readParamsInteractive
+   (g, adj) <- readGraph srcPath
    let eilerResult = getEilerResult g
-   writeVertexes "resultGraph.png" adj eilerResult
+   writeVertexes destPath adj eilerResult
    return ()
+   
+readParamsInteractive :: IO (String, String)
+readParamsInteractive = do 
+   putStr "Input graph file: "
+   srcPath <- getLine
+   putStr "Result image file: "
+   destPath <- getLine
+   return (srcPath, destPath)
 
 getOnesResult :: String
 getOnesResult = show $ Ga2.processOnesGA1 24 16 Ga2.defaultGenAlgContext
