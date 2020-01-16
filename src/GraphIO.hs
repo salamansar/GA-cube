@@ -13,10 +13,14 @@ readGraph path = do
    g <- (readDotFile path)::IO (DotGraph Int)
    putStrLn "Read graph is:"
    putDot g
-   let (mn, mx) = graphBounds g
-   let edges = dotGraphEdges mn g
-   let inGraph = buildG (0, mx - mn) edges
-   return (inGraph, mn)
+   return $ parseFromDot g
+
+-- Transforms DotGraph into Graph with adjust rate   
+parseFromDot :: DotGraph Int -> (Graph, Int)
+parseFromDot g = let (mn, mx) = graphBounds g
+                     edges = dotGraphEdges mn g
+                     inGraph = buildG (0, mx - mn) edges
+                 in (inGraph, mn)
    
 -- Write vertexes into PNG image file with adjust rate
 writeVertexes :: String -> Int -> [Vertex] -> IO ()
@@ -24,8 +28,11 @@ writeVertexes path adjustRate vertexes = do
    let dg = graphFromNodes adjustRate vertexes
    putStrLn "Written graph is:\n"
    putDot dg
-   runGraphvizCommand Dot dg Png path
-   return ()
+   exportToPng dg path
+   
+exportToPng :: DotGraph Int -> String -> IO ()
+exportToPng dg path = do runGraphvizCommand Dot dg Png path
+                         return ()
 
 
 --------- helper functions------------
