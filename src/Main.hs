@@ -1,6 +1,5 @@
 {-#LANGUAGE LambdaCase #-}
 {-#LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Control.Exception.Base
@@ -13,18 +12,11 @@ import qualified EilerGenAlg as Ega
 import EilerGraph
 import qualified GenAlg2 as Ga2
 import GenAlgEngine
-import GraphSamples
 import GraphIO
 import System.Console.GetOpt
 import System.Environment
-
-import Network.Socket
-import Data.Conduit
-import Data.Conduit.Network
+import EilerServer
 import qualified Data.Text.Lazy as T
-import qualified Data.Text.Lazy.Encoding as TE
-import qualified Data.ByteString.Char8 as BS
-import qualified Data.ByteString.Lazy as LBS
 import Data.GraphViz
 
 type GraphArgs = (String, String)
@@ -137,40 +129,7 @@ handleCmdArgs args = do
 ----- server mode --------   
 startEilerGaServer :: Int -> IO ()
 startEilerGaServer port = do putStrLn $ "Starting eiler GA server on port " ++ (show port)
-                             withSocketsDo $ runTCPServer (serverSettings port "*") eilerGaServerApp
-
-eilerGaServerApp :: AppData -> IO()
-eilerGaServerApp appData = do putStrLn "Start handling eiler GA request.."
-                              runConduit $
-                                 appSource appData
-                                 .| decodeDotGraph
-                                 .| findEilerPath
-                                 .| encodeDotGraph
-                                 .| appSink appData 
-                              putStrLn "Eiler GA request handled"
-                       
-decodeDotGraph :: (MonadIO m) => ConduitT BS.ByteString (DotGraph Int) m ()
-decodeDotGraph = do bsOpt <- await
-                    case bsOpt of
-                       Nothing -> return ()
-                       Just bs -> yield $ bsToDotGraph bs
-                       
-encodeDotGraph :: (MonadIO m) => ConduitT (DotGraph Int) BS.ByteString m ()
-encodeDotGraph = do gOpt <- await
-                    case gOpt of
-                       Nothing -> return ()
-                       Just dg -> yield $ dotGraphToBS dg 
-                       
-findEilerPath :: (MonadIO m) => ConduitT (DotGraph Int) (DotGraph Int) m ()
-findEilerPath = do gOpt <- await
-                   case gOpt of
-                      Nothing -> return ()
-                      Just dg -> do let (srcGraph, adj) = parseFromDot dg
-                                    liftIO $ putStrLn "Strat finding eiler path..."
-                                    case getEilerResult srcGraph of
-                                       Left e -> liftIO $ putStrLn e
-                                       Right result -> do liftIO $ putStrLn "Eiler path was found."
-                                                          yield $ graphFromNodes adj result      
+                             runEilerGaServer port getEilerResult  
                        
 ----- client mode --------  
                        
@@ -179,37 +138,7 @@ startEilerGaClient (input, output) serverArgs = do putStrLn $ "Reading grpah fro
                                                    inputGraph <- readFile input
                                                    result <- receiveEilerResult (T.pack inputGraph) serverArgs
                                                    putStrLn $ "Writing result to PNG image " ++ output
-                                                   exportToPng (parseDotGraph result) output                                                                                                     
-   
-receiveEilerResult :: T.Text -> ServerArgs -> IO T.Text
-receiveEilerResult graphText (host, port) = do putStrLn "Requesting result from server.."
-                                               result <- withSocketsDo $ runTCPClient clSettings (eilerGaClientApp graphText)
-                                               putStrLn "Result was received."
-                                               return result
-                                            where clSettings = clientSettings port (BS.pack host)
-   
-
-eilerGaClientApp :: T.Text -> AppData -> IO T.Text
-eilerGaClientApp graphText appData = do putStrLn "Sending message to server..." 
-                                        runConduit $ (yield $ textToBS graphText) .| appSink appData
-                                        putStrLn "Receiving message from server..."
-                                        runConduit $ appSource appData .| ( do Just result <- await
-                                                                               return $ bsToText result)
-                                                                               
------- server/client utils ------
-
-bsToText :: BS.ByteString -> T.Text
-bsToText = (TE.decodeUtf8).(LBS.fromStrict)
-
-textToBS :: T.Text -> BS.ByteString
-textToBS = (LBS.toStrict).(TE.encodeUtf8)
-
-bsToDotGraph :: BS.ByteString -> DotGraph Int
-bsToDotGraph = parseDotGraph.bsToText
-
-dotGraphToBS :: DotGraph Int -> BS.ByteString
-dotGraphToBS = textToBS.printDotGraph
-
+                                                   exportToPng (parseDotGraph result) output   
 ----------------------------------
                                             
 handleGaArgs :: CmdArgs -> IO()
