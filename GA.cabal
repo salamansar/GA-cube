@@ -43,7 +43,8 @@ executable ga-main
                        lens, 
                        mtl,
                        network >= 3.1.0 || <3.2.0,
-                       text >= 1.2.3
+                       text >= 1.2.3,
+                       optparse-applicative >= 0.15.0.0
   hs-source-dirs:      src
   default-language:    Haskell2010
   -- ghc-options: -prof -fprof-auto -rtsopts
